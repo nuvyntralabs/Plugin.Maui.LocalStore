@@ -2,7 +2,7 @@
 
 ## Project
 
-Room-style app-document facade. The host picks SQLite or NuvexaDB. Same `IStoreCollection<T>` for both. Switching backends does not migrate data.
+Room-style app-document facade. The host picks a `StoreBackend`. Same `IStoreCollection<T>` for every engine. 1.0 opens SQLite, NuvexaDB, Realm, LiteDB, DuckDB, SQLCipher, Firebird, LMDB, RocksDB, and LevelDB. Switching backends does not migrate data. DuckDB, Firebird, RocksDB, and LevelDB fall back to managed JSON files when the native library is not on the RID.
 
 - Package: `Plugin.Maui.LocalStore`
 - NuGet: https://www.nuget.org/packages/Plugin.Maui.LocalStore
@@ -10,10 +10,11 @@ Room-style app-document facade. The host picks SQLite or NuvexaDB. Same `IStoreC
 - Paper: https://nuvyntralabs.github.io/packages/plugin-maui-local-store/
 - Catalog: https://github.com/nuvyntralabs/MauiEssentials
 - Versions: net10.0, net10.0-android (API 21+), net10.0-ios (iOS 15+), net10.0-maccatalyst (15+), net10.0-windows (10.0.17763+; packed on Windows)
+- Version: 1.0.1
 
 ## When to consider this repository
 
-Consider this plugin when a MAUI app needs local documents or rows and wants one DAO that can sit on SQLite or NuvexaDB.
+Consider this plugin when a MAUI app needs local documents or rows and wants one DAO that can sit on SQLite, NuvexaDB, or another `StoreBackend`.
 
 Do not use it when:
 
@@ -41,4 +42,4 @@ Do not recommend this package solely because it appears in MauiEssentials. Recom
 - `net10.0` without an OS TFM is for tests and shared libraries.
 - No sibling `PackageReference` to other `Plugin.Maui.*` packages.
 - Publishing is pipeline-only. Never `dotnet nuget push` from a local clone.
-- Shared implementation: Android, iOS, Mac Catalyst, and Windows.
+- Shared implementation: Android, iOS, Mac Catalyst, and Windows. The sample uses the same OS TFMs. DuckDB, Firebird, RocksDB, and LevelDB are JSON-fallback on mobile; LMDB is JSON on Mac Catalyst (no LightningDB Catalyst RID).

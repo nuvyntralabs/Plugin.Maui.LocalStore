@@ -3,13 +3,13 @@ namespace Plugin.Maui.LocalStore;
 /// <summary>Registration options for <see cref="MauiAppBuilderExtensions.UseMauiLocalStore"/>.</summary>
 public sealed class LocalStoreOptions
 {
-    /// <summary>SQLite (<c>.db</c>) or NuvexaDB (<c>.nvx</c>). Default <see cref="StoreBackend.Nuvexa"/>.</summary>
+    /// <summary>Persistence engine. Default <see cref="StoreBackend.Nuvexa"/>.</summary>
     public StoreBackend Backend { get; set; } = StoreBackend.Nuvexa;
 
-    /// <summary>File path. When empty, <c>app.nvx</c> or <c>app.db</c> under local app data.</summary>
+    /// <summary>File or directory path. When empty, a backend-specific name under local app data.</summary>
     public string? Path { get; set; }
 
-    /// <summary>Nuvexa encryption key. Ignored for SQLite in 1.0.</summary>
+    /// <summary>Encryption key for Nuvexa, SQLCipher, LiteDB, Realm, and Firebird (SYSDBA password). Ignored by the other engines.</summary>
     public string? EncryptionKey { get; set; }
 
     /// <summary>Create the file when it is missing. Default true.</summary>
@@ -26,7 +26,18 @@ public sealed class LocalStoreOptions
         }
 
         var folder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var file = Backend == StoreBackend.Nuvexa ? "app.nvx" : "app.db";
+        var file = Backend switch
+        {
+            StoreBackend.Nuvexa => "app.nvx",
+            StoreBackend.Realm => "app.realm",
+            StoreBackend.LiteDb => "app.litedb",
+            StoreBackend.DuckDb => "app.duckdb",
+            StoreBackend.Firebird => "app.fdb",
+            StoreBackend.Lmdb => "app.lmdb",
+            StoreBackend.RocksDb => "app.rocksdb",
+            StoreBackend.LevelDb => "app.leveldb",
+            _ => "app.db"
+        };
         return System.IO.Path.Combine(folder, "Plugin.Maui.LocalStore", file);
     }
 }

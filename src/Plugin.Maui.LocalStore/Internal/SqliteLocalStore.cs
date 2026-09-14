@@ -6,25 +6,33 @@ sealed class SqliteLocalStore : ILocalStore
 {
     readonly SemaphoreSlim _gate = new(1, 1);
     readonly string _path;
+    readonly string? _key;
     SQLiteAsyncConnection? _connection;
     bool _disposed;
 
     public SqliteLocalStore(LocalStoreOptions options)
+        : this(options, options.Backend == StoreBackend.SqlCipher ? StoreBackend.SqlCipher : StoreBackend.Sqlite)
     {
-        _path = options.ResolvePath();
-        var directory = Path.GetDirectoryName(_path);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        if (!File.Exists(_path) && !options.CreateIfMissing)
-        {
-            throw new LocalStoreException($"SQLite database '{_path}' was not found.");
-        }
     }
 
-    public StoreBackend Backend => StoreBackend.Sqlite;
+    public SqliteLocalStore(LocalStoreOptions options, StoreBackend backend)
+    {
+        if (backend is not (StoreBackend.Sqlite or StoreBackend.SqlCipher))
+        {
+            throw new LocalStoreException($"SqliteLocalStore cannot open {backend}.");
+        }
+
+        Backend = backend;
+        _key = options.EncryptionKey;
+        if (backend == StoreBackend.SqlCipher && string.IsNullOrWhiteSpace(_key))
+        {
+            throw new LocalStoreException("SQLCipher requires EncryptionKey.");
+        }
+
+        _path = StorePaths.PrepareFile(options, backend == StoreBackend.SqlCipher ? "SQLCipher" : "SQLite");
+    }
+
+    public StoreBackend Backend { get; }
 
     public IStoreCollection<T> GetCollection<T>(string name) where T : class, new() =>
         new SqliteStoreCollection<T>(this, StoreNames.Collection(name));
@@ -46,9 +54,10 @@ sealed class SqliteLocalStore : ILocalStore
             }
 
             SQLitePCL.Batteries_V2.Init();
-            _connection = new SQLiteAsyncConnection(
-                _path,
-                SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create | SQLiteOpenFlags.FullMutex);
+            var flags = SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create | SQLiteOpenFlags.FullMutex;
+            _connection = Backend == StoreBackend.SqlCipher
+                ? new SQLiteAsyncConnection(new SQLiteConnectionString(_path, flags, true, key: _key))
+                : new SQLiteAsyncConnection(_path, flags);
             return _connection;
         }
         finally

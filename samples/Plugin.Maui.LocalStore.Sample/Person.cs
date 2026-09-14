@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Plugin.Maui.LocalStore.Sample;
 
 public sealed class Person
@@ -7,4 +9,7 @@ public sealed class Person
     public int Age { get; set; }
     public string Status { get; set; } = "active";
     public string? City { get; set; }
+
+    [JsonIgnore]
+    public string Summary => $"{Age} · {City} · {Status} · {Id}";
 }

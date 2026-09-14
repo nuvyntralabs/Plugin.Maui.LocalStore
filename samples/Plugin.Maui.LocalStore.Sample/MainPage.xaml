@@ -4,24 +4,103 @@
              x:Class="Plugin.Maui.LocalStore.Sample.MainPage"
              Title="Local store">
 
-    <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="10">
+    <ScrollView x:Name="PageScroll">
+        <VerticalStackLayout Padding="16" Spacing="8">
             <Label Text="Plugin.Maui.LocalStore" FontSize="22" FontAttributes="Bold" />
-            <Label Text="One DAO. Host picks SQLite or NuvexaDB. Switching does not migrate data."
+            <Label Text="Same IStoreCollection CRUD and FindAsync on every engine. Switching does not migrate data."
                    TextColor="Gray" />
+            <Label x:Name="StatusLabel" FontSize="13" LineBreakMode="WordWrap" />
 
-            <Label Text="Backend" FontAttributes="Bold" Margin="0,8,0,0" />
+            <Label Text="Backend" FontAttributes="Bold" Margin="0,6,0,0" />
             <Picker x:Name="BackendPicker" Title="Backend" SelectedIndexChanged="OnBackendChanged">
                 <Picker.Items>
-                    <x:String>NuvexaDB</x:String>
                     <x:String>SQLite</x:String>
+                    <x:String>NuvexaDB</x:String>
+                    <x:String>LiteDB</x:String>
+                    <x:String>SQLCipher</x:String>
+                    <x:String>Realm</x:String>
+                    <x:String>DuckDB</x:String>
+                    <x:String>Firebird</x:String>
+                    <x:String>LMDB</x:String>
+                    <x:String>RocksDB</x:String>
+                    <x:String>LevelDB</x:String>
                 </Picker.Items>
             </Picker>
 
-            <Button Text="Run tour" Clicked="OnTourClicked" />
+            <Label Text="Row" FontAttributes="Bold" Margin="0,6,0,0" />
+            <Entry x:Name="IdEntry" Placeholder="Id (empty on insert)" />
+            <Entry x:Name="NameEntry" Placeholder="Name" />
+            <Entry x:Name="AgeEntry" Placeholder="Age" Keyboard="Numeric" />
+            <HorizontalStackLayout Spacing="8">
+                <Picker x:Name="StatusEntry" Title="Status" WidthRequest="160">
+                    <Picker.Items>
+                        <x:String>active</x:String>
+                        <x:String>retired</x:String>
+                        <x:String>inactive</x:String>
+                    </Picker.Items>
+                </Picker>
+                <Entry x:Name="CityEntry" Placeholder="City" HorizontalOptions="Fill" />
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Insert" Clicked="OnInsertClicked" />
+                <Button Text="Update" Clicked="OnUpdateClicked" />
+                <Button Text="Delete" Clicked="OnDeleteClicked" />
+                <Button Text="Load Id" Clicked="OnLoadIdClicked" />
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Seed demo rows" Clicked="OnSeedClicked" />
+                <Button Text="Reset file" Clicked="OnResetClicked" />
+                <Button Text="Clear form" Clicked="OnClearFormClicked" />
+            </HorizontalStackLayout>
 
-            <Label Text="Output" FontAttributes="Bold" Margin="0,12,0,0" />
-            <Label x:Name="Output" FontFamily="Courier New" FontSize="12" LineBreakMode="WordWrap" />
+            <Label Text="Select" FontAttributes="Bold" Margin="0,6,0,0" />
+            <Picker x:Name="FilterPicker" Title="Filter" SelectedIndexChanged="OnFilterChanged">
+                <Picker.Items>
+                    <x:String>All rows</x:String>
+                    <x:String>Age &gt;= 21, sort Name</x:String>
+                    <x:String>London AND active, Age desc</x:String>
+                    <x:String>Age &lt; 30 OR NewYork</x:String>
+                    <x:String>Custom (Age / City / Status)</x:String>
+                </Picker.Items>
+            </Picker>
+            <HorizontalStackLayout Spacing="8">
+                <Entry x:Name="MinAgeEntry" Placeholder="Min age" Keyboard="Numeric" WidthRequest="100" />
+                <Entry x:Name="FilterCityEntry" Placeholder="City equals" />
+                <Picker x:Name="FilterStatusPicker" Title="Status" WidthRequest="140">
+                    <Picker.Items>
+                        <x:String>(any)</x:String>
+                        <x:String>active</x:String>
+                        <x:String>retired</x:String>
+                        <x:String>inactive</x:String>
+                    </Picker.Items>
+                </Picker>
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Find" Clicked="OnFindClicked" />
+                <Button Text="Contract tour" Clicked="OnTourClicked" />
+                <Button x:Name="TestAllButton" Text="Test all engines" Clicked="OnTestAllClicked" />
+            </HorizontalStackLayout>
+            <Label x:Name="Output" FontSize="12" LineBreakMode="WordWrap" />
+
+            <Label Text="Rows" FontAttributes="Bold" Margin="0,6,0,0" />
+            <CollectionView x:Name="PeopleList"
+                            HeightRequest="280"
+                            SelectionMode="Single"
+                            SelectionChanged="OnPersonSelected">
+                <CollectionView.EmptyView>
+                    <Label Text="No rows. Insert or seed demo data, then Find."
+                           TextColor="Gray"
+                           Margin="8" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <VerticalStackLayout Padding="8,6" Spacing="2">
+                            <Label Text="{Binding Name}" FontAttributes="Bold" />
+                            <Label Text="{Binding Summary}" TextColor="Gray" FontSize="12" />
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

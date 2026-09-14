@@ -18,8 +18,16 @@ public static class LocalStore
         options ??= new LocalStoreOptions();
         ILocalStore store = options.Backend switch
         {
-            StoreBackend.Sqlite => new SqliteLocalStore(options),
+            StoreBackend.Sqlite => new SqliteLocalStore(options, StoreBackend.Sqlite),
+            StoreBackend.SqlCipher => new SqliteLocalStore(options, StoreBackend.SqlCipher),
             StoreBackend.Nuvexa => new NuvexaLocalStore(options),
+            StoreBackend.LiteDb => new LiteDbLocalStore(options),
+            StoreBackend.DuckDb => EngineOpen.DuckDb(options),
+            StoreBackend.Firebird => EngineOpen.Firebird(options),
+            StoreBackend.Realm => new RealmLocalStore(options),
+            StoreBackend.Lmdb => new LmdbLocalStore(options),
+            StoreBackend.RocksDb => new RocksDbLocalStore(options),
+            StoreBackend.LevelDb => new LevelDbLocalStore(options),
             _ => throw new LocalStoreException($"Unknown backend {options.Backend}.")
         };
         SetDefault(store);

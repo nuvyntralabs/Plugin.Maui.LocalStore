@@ -22,9 +22,9 @@
     <RootNamespace>Plugin.Maui.LocalStore</RootNamespace>
     <AssemblyName>Plugin.Maui.LocalStore</AssemblyName>
     <PackageId>Plugin.Maui.LocalStore</PackageId>
-    <Title>.NET MAUI LocalStore — Room-style SQLite or NuvexaDB</Title>
-    <Description>Room-style app-document facade for .NET MAUI. One collection API; the host picks SQLite or NuvexaDB. Not a job queue, not OfflineSync, and not a replacement for using Nuventra.NuvexaDB directly. Switching backends does not migrate data.</Description>
-    <PackageTags>dotnet-maui;maui;maui-plugin;sqlite;nuvexadb;local-store;room;embedded;offline;android;ios;maccatalyst;windows;mauiessentials</PackageTags>
+    <Title>.NET MAUI LocalStore — Room-style local database facade</Title>
+    <Description>Room-style app-document facade for .NET MAUI. One collection API; the host picks SQLite, NuvexaDB, Realm, LiteDB, DuckDB, SQLCipher, Firebird, LMDB, RocksDB, or LevelDB. Not a job queue, not OfflineSync, and not a replacement for using Nuventra.NuvexaDB directly. Switching backends does not migrate data.</Description>
+    <PackageTags>dotnet-maui;maui;maui-plugin;sqlite;nuvexadb;realm;litedb;duckdb;sqlcipher;firebird;lmdb;rocksdb;leveldb;local-store;room;embedded;offline;android;ios;maccatalyst;windows;mauiessentials</PackageTags>
     <Authors>Niladri</Authors>
     <Company>MauiEssentials</Company>
     <Copyright>Copyright © 2026 Niladri</Copyright>
@@ -34,18 +34,14 @@
     <PackageProjectUrl>https://nuvyntralabs.github.io/packages/plugin-maui-local-store/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/nuvyntralabs/Plugin.Maui.LocalStore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Version>1.0.0</Version>
-    <PackageReleaseNotes>Initial 1.0.0: ILocalStore / IStoreCollection with host-selected SQLite or NuvexaDB backends.</PackageReleaseNotes>
+    <Version>1.0.1</Version>
+    <PackageVersion>1.0.1</PackageVersion>
+    <PackageReleaseNotes>1.0.1: Ten engines, JSON fallback on unsupported RIDs, platform table, sample picker aligned with library TFMs.</PackageReleaseNotes>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IsPackable>true</IsPackable>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <NuvexaDbProject Condition="Exists('..\..\..\NuvexaDB\src\Nuventra.NuvexaDB\Nuventra.NuvexaDB.csproj')">..\..\..\NuvexaDB\src\Nuventra.NuvexaDB\Nuventra.NuvexaDB.csproj</NuvexaDbProject>
-    <NuvexaDbProject Condition="'$(NuvexaDbProject)' == '' and Exists('..\..\NuvexaDB\src\Nuventra.NuvexaDB\Nuventra.NuvexaDB.csproj')">..\..\NuvexaDB\src\Nuventra.NuvexaDB\Nuventra.NuvexaDB.csproj</NuvexaDbProject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -55,15 +51,26 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- SQLite -->
     <PackageReference Include="sqlite-net-base" Version="1.9.172" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(NuvexaDbProject)' != ''">
-    <ProjectReference Include="$(NuvexaDbProject)" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(NuvexaDbProject)' == ''">
+    <!-- SQLCipher (encrypted SQLite). Do not also reference sqlite-net-sqlcipher — it duplicates sqlite-net-base types. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.1.11" />
     <PackageReference Include="Nuventra.NuvexaDB" Version="1.0.5" />
+    <PackageReference Include="LiteDB" Version="5.0.21" />
+    <PackageReference Include="Realm" Version="20.1.0" />
+    <PackageReference Include="DuckDB.NET.Data.Full" Version="1.5.5" />
+    <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="10.3.4" />
+    <PackageReference Include="FirebirdDb.Embedded.V5.NativeAssets.Windows.All" Version="2.0.6" />
+    <PackageReference Include="FirebirdDb.Embedded.V5.NativeAssets.Linux.All" Version="2.0.6" />
+    <!-- No maccatalyst RID; the iOS dylib is linked into Catalyst and fails. JSON fallback instead. -->
+    <PackageReference Include="LightningDB" Version="0.23.0" />
+    <PackageReference Update="LightningDB"
+                      Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'"
+                      ExcludeAssets="native;build;buildTransitive" />
+    <PackageReference Include="RocksDB" Version="11.8.1.5032" />
+    <!-- Native leveldb.dll files are ELF/Mach-O; Android ProcessAssemblies treats them as PE and fails. -->
+    <PackageReference Include="LevelDB.Standard" Version="2.1.6.1" ExcludeAssets="native;build;buildTransitive" />
   </ItemGroup>
 
   <ItemGroup>

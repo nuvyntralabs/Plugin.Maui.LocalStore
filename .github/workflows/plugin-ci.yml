@@ -75,13 +75,6 @@ jobs:
           ref: main
           path: .ci-tools
 
-      - name: Checkout NuvexaDB engine
-        uses: actions/checkout@v4
-        with:
-          repository: nuvyntralabs/NuvexaDB
-          ref: main
-          path: NuvexaDB
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
