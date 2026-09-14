@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SkipValidateMauiImplicitPackageReferences>true</SkipValidateMauiImplicitPackageReferences>
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CA1416;CS1591;IL2026;IL3050</NoWarn>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+
+    <RootNamespace>Plugin.Maui.LocalStore</RootNamespace>
+    <AssemblyName>Plugin.Maui.LocalStore</AssemblyName>
+    <PackageId>Plugin.Maui.LocalStore</PackageId>
+    <Title>.NET MAUI LocalStore — Room-style SQLite or NuvexaDB</Title>
+    <Description>Room-style app-document facade for .NET MAUI. One collection API; the host picks SQLite or NuvexaDB. Not a job queue, not OfflineSync, and not a replacement for using Nuventra.NuvexaDB directly. Switching backends does not migrate data.</Description>
+    <PackageTags>dotnet-maui;maui;maui-plugin;sqlite;nuvexadb;local-store;room;embedded;offline;android;ios;maccatalyst;windows;mauiessentials</PackageTags>
+    <Authors>Niladri</Authors>
+    <Company>MauiEssentials</Company>
+    <Copyright>Copyright © 2026 Niladri</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageProjectUrl>https://nuvyntralabs.github.io/packages/plugin-maui-local-store/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/nuvyntralabs/Plugin.Maui.LocalStore</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Version>1.0.0</Version>
+    <PackageReleaseNotes>Initial 1.0.0: ILocalStore / IStoreCollection with host-selected SQLite or NuvexaDB backends.</PackageReleaseNotes>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NuvexaDbProject Condition="Exists('..\..\..\NuvexaDB\src\Nuventra.NuvexaDB\Nuventra.NuvexaDB.csproj')">..\..\..\NuvexaDB\src\Nuventra.NuvexaDB\Nuventra.NuvexaDB.csproj</NuvexaDbProject>
+    <NuvexaDbProject Condition="'$(NuvexaDbProject)' == '' and Exists('..\..\NuvexaDB\src\Nuventra.NuvexaDB\Nuventra.NuvexaDB.csproj')">..\..\NuvexaDB\src\Nuventra.NuvexaDB\Nuventra.NuvexaDB.csproj</NuvexaDbProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+    <None Include="..\..\nuget.png" Pack="true" PackagePath="icon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="sqlite-net-base" Version="1.9.172" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(NuvexaDbProject)' != ''">
+    <ProjectReference Include="$(NuvexaDbProject)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(NuvexaDbProject)' == ''">
+    <PackageReference Include="Nuventra.NuvexaDB" Version="1.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Plugin.Maui.LocalStore.Tests" />
+  </ItemGroup>
+
+</Project>

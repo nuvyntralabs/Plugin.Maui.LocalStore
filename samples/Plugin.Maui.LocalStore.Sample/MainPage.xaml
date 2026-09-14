@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Plugin.Maui.LocalStore.Sample.MainPage"
+             Title="Local store">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="10">
+            <Label Text="Plugin.Maui.LocalStore" FontSize="22" FontAttributes="Bold" />
+            <Label Text="One DAO. Host picks SQLite or NuvexaDB. Switching does not migrate data."
+                   TextColor="Gray" />
+
+            <Label Text="Backend" FontAttributes="Bold" Margin="0,8,0,0" />
+            <Picker x:Name="BackendPicker" Title="Backend" SelectedIndexChanged="OnBackendChanged">
+                <Picker.Items>
+                    <x:String>NuvexaDB</x:String>
+                    <x:String>SQLite</x:String>
+                </Picker.Items>
+            </Picker>
+
+            <Button Text="Run tour" Clicked="OnTourClicked" />
+
+            <Label Text="Output" FontAttributes="Bold" Margin="0,12,0,0" />
+            <Label x:Name="Output" FontFamily="Courier New" FontSize="12" LineBreakMode="WordWrap" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
