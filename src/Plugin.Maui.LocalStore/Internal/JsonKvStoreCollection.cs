@@ -130,6 +130,9 @@ abstract class JsonKvLocalStore : ILocalStore
 
     public StoreBackend Backend { get; }
 
+    /// <summary>JSON files cannot run SQL or NQL, even when <see cref="Backend"/> is DuckDB or Firebird.</summary>
+    public StoreQueryLanguage QueryLanguage => StoreQueryLanguage.None;
+
     public IStoreCollection<T> GetCollection<T>(string name) where T : class, new() =>
         new JsonKvStoreCollection<T>(_kv, StoreNames.Collection(name));
 

@@ -1,6 +1,6 @@
 namespace Plugin.Maui.LocalStore;
 
-/// <summary>Host-selected persistence engine. Switching does not migrate data.</summary>
+/// <summary>Host-selected persistence engine. Set <c>AutoMigrate</c> + <c>Map&lt;T&gt;</c> to copy collections when switching.</summary>
 public enum StoreBackend
 {
     /// <summary>Relational SQLite. Shipped in 1.0. File <c>app.db</c>.</summary>

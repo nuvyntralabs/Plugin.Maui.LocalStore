@@ -9,7 +9,7 @@
 
 An **abstract database layer** for **.NET MAUI** on **Android**, **iOS**, **Mac Catalyst**, and **Windows**. The host picks an engine (`StoreBackend`). Application code always uses the same methods on `ILocalStore` / `IStoreCollection<T>`.
 
-You do not change insert / find / replace / delete / select when you add or switch a backend. Each engine has its own file. Switching does **not** migrate data.
+You do not change insert / find / replace / delete / select when you add or switch a backend. Each engine has its own file. Set `AutoMigrate` and `Map<T>` to copy collections when you switch. Raw SQL or NQL runs on `ILocalStore.QueryAsync`. Optional `[StoreDao]` interfaces are source-generated.
 
 ```
 host always calls
@@ -21,9 +21,9 @@ host always calls
   SQLCipher   Firebird     LMDB / RocksDB / LevelDB
 ```
 
-1.0 **opens** every engine in the table below. Host CRUD stays the same. See [Platforms](#platforms) for which databases actually run on Android, iOS, Windows, and Mac Catalyst.
+1.1 **opens** every engine in the table below. Host CRUD stays the same. See [Platforms](#platforms) for which databases actually run on Android, iOS, Windows, and Mac Catalyst.
 
-This is not JobQueue or RetryQueue (durable jobs). It is not OfflineSync (sync + conflicts). It is not androidx.room.
+This is not JobQueue or RetryQueue (durable jobs). It is not OfflineSync (sync + conflicts). `[StoreDao]` is a Room-style generator over this facade, not androidx.room.
 
 Package: [https://www.nuget.org/packages/Plugin.Maui.LocalStore](https://www.nuget.org/packages/Plugin.Maui.LocalStore)
 
@@ -69,11 +69,11 @@ Selection does not change. Keep `o.Backend = StoreBackend.DuckDb` (or Firebird, 
 
 On that OS, LocalStore stores each row as a JSON file (`app.duckdb.kv/`, `app.fdb.kv/`, or files under `app.lmdb/`, `app.rocksdb/`, `app.leveldb/`). `InsertAsync`, `FindByIdAsync`, `ReplaceAsync`, `DeleteByIdAsync`, and `FindAsync` still work. Filters run in memory. `EnsureIndexAsync` does nothing.
 
-This is **not** DuckDB / Firebird / RocksDB / LevelDB / LMDB. Switching later to a native file on a supported OS does **not** migrate those JSON rows. Use SQLite, SQLCipher, NuvexaDB, LiteDB, or Realm when you need the real engine on every MAUI platform.
+This is **not** DuckDB / Firebird / RocksDB / LevelDB / LMDB. Switching later to a native file on a supported OS still needs `AutoMigrate` + `Map<T>` (same as any other engine switch). Use SQLite, SQLCipher, NuvexaDB, LiteDB, or Realm when you need the real engine on every MAUI platform.
 
 ## Common methods
 
-The host never writes SQL, NQL, or engine APIs on the shared path. Every backend must implement these operations:
+Portable CRUD stays on `IStoreCollection<T>`. Raw SQL / NQL is optional on `ILocalStore`.
 
 | Operation | Method |
 | --- | --- |
@@ -82,6 +82,8 @@ The host never writes SQL, NQL, or engine APIs on the shared path. Every backend
 | Update | `ReplaceAsync` |
 | Delete | `DeleteByIdAsync` |
 | Select | `FindAsync(StoreFilter, StoreQuery)` |
+| Raw SQL / NQL | `ILocalStore.QueryAsync<T>` / `ExecuteAsync` |
+| Generated DAO | `store.GetDao<IPersonDao>()` |
 | Index | `EnsureIndexAsync` |
 | Close | `DisposeAsync` |
 
@@ -120,6 +122,12 @@ Host registration is `UseMauiLocalStore`. Non-MAUI hosts can call `services.AddM
 | `CreateIfMissing` | `true` | All. `false` throws `LocalStoreException` if the file is missing |
 | `EncryptionKey` | none | Nuvexa (required to open an encrypted `.nvx`), SQLCipher (required), LiteDB password, Realm, Firebird SYSDBA password. Ignored by SQLite, DuckDB, LMDB, RocksDB, LevelDB |
 | `CacheSizeMb` | `16` | Nuvexa only |
+| `AutoMigrate` | `false` | Copy `Map<T>` collections from another engine file when the destination is empty |
+| `MigrateFrom` | none | Source engine. Required when more than one sibling file exists |
+| `MigrateFromPath` | none | Source file. Empty uses the destination folder |
+| `MigrateFromEncryptionKey` | none | Source key. Empty reuses `EncryptionKey` |
+| `DeleteSourceAfterMigrate` | `false` | Remove the source file after a successful copy |
+| `Map<T>(name)` | none | Registers a collection for migrate (required when `AutoMigrate` is true) |
 
 Library and sample share the OS TFMs: `net10.0-android`, `net10.0-ios`, `net10.0-maccatalyst`, plus `net10.0-windows10.0.19041.0` when built on Windows. The library also packs `net10.0` for tests and shared hosts.
 
@@ -401,19 +409,81 @@ if (File.Exists(wal))
 }
 ```
 
-### Engine-only: NQL
+### Raw SQL / NQL
 
-Optional. Not part of the common layer. Other engines have no NQL.
+`ILocalStore.QueryAsync<T>` / `ExecuteAsync` are on the shared store. The dialect is `store.QueryLanguage`.
+
+| Engine | `QueryLanguage` | Command |
+| --- | --- | --- |
+| SQLite, SQLCipher | `Sql` | SQL |
+| DuckDB, Firebird | `Sql` when native; `None` on the JSON fallback | SQL when native |
+| Nuvexa | `Nql` | NQL |
+| LiteDB, Realm, LMDB, RocksDB, LevelDB | `None` | throws `LocalStoreException` |
 
 ```csharp
-if (store is INuvexaLocalStore nuvexa)
+if (store.QueryLanguage == StoreQueryLanguage.Sql)
 {
-    var rows = await nuvexa.ExecuteNqlAsync(
+    var adults = await store.QueryAsync<Person>(
+        "SELECT * FROM users WHERE Age >= ?",
+        [21]);
+}
+
+if (store.QueryLanguage == StoreQueryLanguage.Nql)
+{
+    var adults = await store.QueryAsync<Person>(
         """db.users.find({ age: { $gte: 21 } }).sort({ name: 1 }).limit(20)""");
 }
 ```
 
-NQL `update` / `delete` needs NuvexaDB **1.0.2+**.
+`INuvexaLocalStore.ExecuteNqlAsync` still returns raw JSON strings. Prefer `QueryAsync<T>` when you want POCOs. NQL `update` / `delete` needs NuvexaDB **1.0.2+**.
+
+### Automatic migration
+
+Each engine keeps its own file. On open, LocalStore can copy registered collections when the destination is empty.
+
+```csharp
+builder.UseMauiLocalStore(o =>
+{
+    o.Backend = StoreBackend.Nuvexa;
+    o.Path = Path.Combine(FileSystem.AppDataDirectory, "app.nvx");
+    o.EncryptionKey = key;
+    o.AutoMigrate = true;
+    o.MigrateFrom = StoreBackend.Sqlite;
+    o.Map<Person>("users");
+});
+```
+
+`Map<T>` is required so both engines can read and write the same POCOs. If `MigrateFrom` is omitted and exactly one other engine file sits next to the destination, that file is used. Two or more siblings throw until you set `MigrateFrom`.
+
+```csharp
+var result = await LocalStore.MigrateAsync(
+    new LocalStoreOptions { Backend = StoreBackend.Sqlite, Path = sqlitePath },
+    new LocalStoreOptions { Backend = StoreBackend.Nuvexa, Path = nvxPath, EncryptionKey = key }
+        .Map<Person>("users"));
+```
+
+Destination rows win: a non-empty mapped collection is left unchanged (`Skipped`). JSON-fallback folders migrate the same way as native files.
+
+### Source-generated DAOs
+
+```csharp
+[StoreDao("users", typeof(Person))]
+public interface IPersonDao
+{
+    Task<string> InsertAsync(Person item, CancellationToken cancellationToken = default);
+    Task<Person?> FindByIdAsync(string id, CancellationToken cancellationToken = default);
+
+    [StoreRaw(
+        Sql = "SELECT * FROM users WHERE Age >= {minAge}",
+        Nql = "db.users.find({ age: { $gte: {minAge} } })")]
+    Task<IReadOnlyList<Person>> FindAdultsAsync(int minAge, CancellationToken cancellationToken = default);
+}
+
+var dao = store.GetDao<IPersonDao>();
+var adults = await dao.FindAdultsAsync(21);
+```
+
+CRUD method names map to `IStoreCollection<T>`. `[StoreRaw]` calls `QueryAsync`. Register `services.AddMauiLocalStoreDao<IPersonDao>()` when you want the DAO in DI.
 
 ---
 
@@ -758,7 +828,7 @@ Do not reuse an unencrypted SQLite `app.db` as a SQLCipher path. Dispose, then o
 
 ## Firebird Embedded
 
-Advanced relational. File: `app.fdb`. Same table-per-collection mapping as SQLite. The host still calls `IStoreCollection<T>`. Desktop opening needs a Firebird 5 embedded tree (`FIREBIRD` pointing at the folder that contains `lib/`, `plugins/`, and `bin/isql`). Windows and Linux can use the `FirebirdDb.Embedded.V5.NativeAssets.*` packages. macOS has no NuGet native assets — use the official Firebird 5 package and set `FIREBIRD` / `FIREBIRD_CLIENT`. Android / iOS / Mac Catalyst have no `fbembed` package; LocalStore uses the managed JSON folder (`app.fdb.kv`) so CRUD still works. Optional `EncryptionKey` is the SYSDBA password on a real Firebird file (`masterkey` when omitted). Switching backends does not migrate data.
+Advanced relational. File: `app.fdb`. Same table-per-collection mapping as SQLite. The host still calls `IStoreCollection<T>`. Desktop opening needs a Firebird 5 embedded tree (`FIREBIRD` pointing at the folder that contains `lib/`, `plugins/`, and `bin/isql`). Windows and Linux can use the `FirebirdDb.Embedded.V5.NativeAssets.*` packages. macOS has no NuGet native assets — use the official Firebird 5 package and set `FIREBIRD` / `FIREBIRD_CLIENT`. Android / iOS / Mac Catalyst have no `fbembed` package; LocalStore uses the managed JSON folder (`app.fdb.kv`) so CRUD still works. Optional `EncryptionKey` is the SYSDBA password on a real Firebird file (`masterkey` when omitted). Use `AutoMigrate` + `Map<T>` when switching engines.
 
 ### Register
 
@@ -1118,7 +1188,7 @@ LocalStore.Open(new LocalStoreOptions
 
 `samples/Plugin.Maui.LocalStore.Sample` uses the same OS TFMs as the library: `net10.0-android`, `net10.0-ios`, `net10.0-maccatalyst`, and `net10.0-windows10.0.19041.0` when the sample is built on Windows. `MauiProgram` does **not** call `UseMauiLocalStore` — the Backend picker calls `LocalStore.Open` so you can walk every engine. A host app that uses one engine should register it with `UseMauiLocalStore`.
 
-Use insert / update / delete / find by Id, `FindAsync` presets (all, Age ≥ 21, London AND active, Age &lt; 30 OR NewYork, custom), Seed, Reset file, Contract tour, and **Test all engines**. DuckDB, Firebird, and RocksDB pass on device via the JSON fallback (they are not silent skips). SQLCipher uses `app-cipher.db` so it does not share the SQLite `app.db`.
+Use insert / update / delete / find by Id, `FindAsync` presets (all, Age ≥ 21, London AND active, Age &lt; 30 OR NewYork, custom), Seed, Reset file, Contract tour, and **Test all engines**. The **1.1** buttons run `Migrate SQLite → Nuvexa`, raw `QueryAsync` (SQL or NQL), and the generated `IPersonDao`. **Test migrate + DAO** asserts those two flows. DuckDB, Firebird, and RocksDB pass on device via the JSON fallback (CRUD only; `QueryLanguage` is `None`). SQLCipher uses `app-cipher.db` so it does not share the SQLite `app.db`.
 
 ## License
 

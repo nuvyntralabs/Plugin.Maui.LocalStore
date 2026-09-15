@@ -7,7 +7,7 @@
     <ScrollView x:Name="PageScroll">
         <VerticalStackLayout Padding="16" Spacing="8">
             <Label Text="Plugin.Maui.LocalStore" FontSize="22" FontAttributes="Bold" />
-            <Label Text="Same IStoreCollection CRUD and FindAsync on every engine. Switching does not migrate data."
+            <Label Text="Same IStoreCollection CRUD on every engine. AutoMigrate copies mapped collections. QueryAsync is SQL or NQL."
                    TextColor="Gray" />
             <Label x:Name="StatusLabel" FontSize="13" LineBreakMode="WordWrap" />
 
@@ -80,6 +80,14 @@
                 <Button Text="Contract tour" Clicked="OnTourClicked" />
                 <Button x:Name="TestAllButton" Text="Test all engines" Clicked="OnTestAllClicked" />
             </HorizontalStackLayout>
+
+            <Label Text="1.1 — migrate and DAO / raw query" FontAttributes="Bold" Margin="0,6,0,0" />
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Migrate SQLite → Nuvexa" Clicked="OnMigrateClicked" />
+                <Button Text="Raw SQL / NQL" Clicked="OnRawQueryClicked" />
+                <Button Text="Generated DAO" Clicked="OnDaoClicked" />
+            </HorizontalStackLayout>
+            <Button Text="Test migrate + DAO" Clicked="OnTestFeaturesClicked" />
             <Label x:Name="Output" FontSize="12" LineBreakMode="WordWrap" />
 
             <Label Text="Rows" FontAttributes="Bold" Margin="0,6,0,0" />

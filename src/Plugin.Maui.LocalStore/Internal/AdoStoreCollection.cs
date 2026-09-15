@@ -44,6 +44,9 @@ abstract class AdoLocalStore : ILocalStore
     }
 
     public StoreBackend Backend { get; }
+
+    public StoreQueryLanguage QueryLanguage => StoreQueryLanguage.Sql;
+
     protected string Path { get; }
     protected LocalStoreOptions Options { get; }
     protected string Engine { get; }
@@ -51,6 +54,24 @@ abstract class AdoLocalStore : ILocalStore
 
     public IStoreCollection<T> GetCollection<T>(string name) where T : class, new() =>
         new AdoStoreCollection<T>(this, StoreNames.Collection(name));
+
+    public Task<IReadOnlyList<T>> QueryAsync<T>(
+        string command,
+        object?[]? args = null,
+        CancellationToken cancellationToken = default) where T : class, new()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(command);
+        return LockedAsync(db => AdoMapper.Query<T>(db, Dialect, command, args ?? []), cancellationToken);
+    }
+
+    public Task<int> ExecuteAsync(
+        string command,
+        object?[]? args = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(command);
+        return LockedAsync(db => AdoMapper.Execute(db, Dialect, command, args ?? []), cancellationToken);
+    }
 
     protected abstract DbConnection CreateConnection();
 

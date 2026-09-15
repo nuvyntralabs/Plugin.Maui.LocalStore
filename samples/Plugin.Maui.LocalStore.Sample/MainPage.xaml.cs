@@ -164,6 +164,42 @@ public partial class MainPage : ContentPage
             await RefreshAsync().ConfigureAwait(true);
         });
 
+    async void OnMigrateClicked(object? sender, EventArgs e) =>
+        await SafeAsync(async () =>
+        {
+            var (log, destination) = await FeatureDemos.RunMigrateAsync().ConfigureAwait(true);
+            await OpenDemoAsync(destination).ConfigureAwait(true);
+            Output.Text = log;
+            await RefreshAsync().ConfigureAwait(true);
+        });
+
+    async void OnRawQueryClicked(object? sender, EventArgs e) =>
+        await SafeAsync(async () =>
+        {
+            if (!LocalStore.IsInitialized)
+            {
+                await OpenSelectedAsync().ConfigureAwait(true);
+            }
+
+            Output.Text = await FeatureDemos.RunRawQueryAsync(LocalStore.Current).ConfigureAwait(true);
+            await RefreshAsync().ConfigureAwait(true);
+        });
+
+    async void OnDaoClicked(object? sender, EventArgs e) =>
+        await SafeAsync(async () =>
+        {
+            if (!LocalStore.IsInitialized)
+            {
+                await OpenSelectedAsync().ConfigureAwait(true);
+            }
+
+            Output.Text = await FeatureDemos.RunDaoAsync(LocalStore.Current).ConfigureAwait(true);
+            await RefreshAsync().ConfigureAwait(true);
+        });
+
+    async void OnTestFeaturesClicked(object? sender, EventArgs e) =>
+        await SafeAsync(TestFeaturesAsync);
+
     async void OnTestAllClicked(object? sender, EventArgs e) =>
         await SafeAsync(TestAllEnginesAsync);
 
@@ -192,9 +228,24 @@ public partial class MainPage : ContentPage
             }
         }
 
-        log.AppendLine($"{passed}/{Choices.Length} engines passed.");
+        try
+        {
+            await AssertQueryAndDaoAsync().ConfigureAwait(true);
+            var (migrateLog, destination) = await FeatureDemos.RunMigrateAsync().ConfigureAwait(true);
+            await OpenDemoAsync(destination).ConfigureAwait(true);
+            await AssertMigratedAsync().ConfigureAwait(true);
+            log.AppendLine("PASS migrate SQLite → Nuvexa + DAO / raw query");
+            log.AppendLine(migrateLog.Trim());
+            passed++;
+        }
+        catch (Exception ex)
+        {
+            log.AppendLine($"FAIL migrate + DAO: {ex.Message}");
+        }
+
+        log.AppendLine($"{passed}/{Choices.Length + 1} checks passed.");
         Output.Text = log.ToString();
-        StatusLabel.Text = $"{passed}/{Choices.Length} engines passed.";
+        StatusLabel.Text = $"{passed}/{Choices.Length + 1} checks passed.";
         var report = Path.Combine(FileSystem.AppDataDirectory, "engine-test.txt");
         File.WriteAllText(report, log.ToString());
         WriteLog(log.ToString());
@@ -228,6 +279,59 @@ public partial class MainPage : ContentPage
         {
             throw new InvalidOperationException("OR select count " + orRows.Count);
         }
+
+        await AssertQueryAndDaoAsync().ConfigureAwait(true);
+    }
+
+    static async Task AssertQueryAndDaoAsync()
+    {
+        var store = LocalStore.Current;
+        if (store.QueryLanguage == StoreQueryLanguage.None)
+        {
+            return;
+        }
+
+        var command = store.QueryLanguage == StoreQueryLanguage.Nql
+            ? "db.users.find({ age: { $gte: 21 } })"
+            : "SELECT * FROM users WHERE Age >= 21";
+        var queried = await store.QueryAsync<Person>(command).ConfigureAwait(true);
+        if (queried.Count == 0)
+        {
+            throw new InvalidOperationException($"{store.Backend} QueryAsync returned no adults.");
+        }
+
+        var adults = await store.GetDao<IPersonDao>().FindAdultsAsync(21).ConfigureAwait(true);
+        if (adults.Count == 0)
+        {
+            throw new InvalidOperationException($"{store.Backend} IPersonDao.FindAdultsAsync returned no rows.");
+        }
+    }
+
+    static async Task AssertMigratedAsync()
+    {
+        var rows = await Users().FindAsync(query: new StoreQuery { SortBy = "Name" }).ConfigureAwait(true);
+        var names = rows.Select(person => person.Name).ToArray();
+        if (LocalStore.Current.Backend != StoreBackend.Nuvexa || names.Length < 3)
+        {
+            throw new InvalidOperationException("Migrate demo: " + string.Join(", ", names));
+        }
+    }
+
+    async Task TestFeaturesAsync()
+    {
+        var log = new System.Text.StringBuilder();
+        var (migrateLog, destination) = await FeatureDemos.RunMigrateAsync().ConfigureAwait(true);
+        await OpenDemoAsync(destination).ConfigureAwait(true);
+        await AssertMigratedAsync().ConfigureAwait(true);
+        log.AppendLine(migrateLog.Trim());
+        log.AppendLine();
+        log.AppendLine(await FeatureDemos.RunRawQueryAsync(LocalStore.Current).ConfigureAwait(true));
+        log.AppendLine(await FeatureDemos.RunDaoAsync(LocalStore.Current).ConfigureAwait(true));
+        await AssertQueryAndDaoAsync().ConfigureAwait(true);
+        log.AppendLine("PASS migrate + raw NQL + generated DAO.");
+        Output.Text = log.ToString();
+        StatusLabel.Text = "1.1 features passed.";
+        await RefreshAsync().ConfigureAwait(true);
     }
 
     static void WriteLog(string message)
@@ -269,14 +373,7 @@ public partial class MainPage : ContentPage
             DeleteStore(path);
         }
 
-        LocalStore.Open(new LocalStoreOptions
-        {
-            Backend = choice.Backend,
-            Path = path,
-            EncryptionKey = choice.Backend is StoreBackend.Nuvexa or StoreBackend.SqlCipher
-                ? "sample-key"
-                : null
-        });
+        await OpenStoreAsync(choice.Backend, path).ConfigureAwait(true);
 
         StatusLabel.Text = $"{choice.Backend} · {path}";
         Output.Text = reset ? $"Opened a new {choice.Backend} file." : $"Opened {choice.Backend}.";
@@ -285,6 +382,37 @@ public partial class MainPage : ContentPage
             await RefreshAsync(logFind: true).ConfigureAwait(true);
         }
     }
+
+    async Task OpenDemoAsync(StoreBackend backend)
+    {
+        var file = backend == StoreBackend.Nuvexa ? FeatureDemos.NuvexaFile : FeatureDemos.SqliteFile;
+        var path = Path.Combine(FileSystem.AppDataDirectory, file);
+        if (LocalStore.IsInitialized)
+        {
+            await LocalStore.Current.DisposeAsync().ConfigureAwait(true);
+        }
+
+        await OpenStoreAsync(backend, path).ConfigureAwait(true);
+        var index = Array.FindIndex(Choices, choice => choice.Backend == backend);
+        if (index >= 0)
+        {
+            _ready = false;
+            BackendPicker.SelectedIndex = index;
+            _ready = true;
+        }
+
+        StatusLabel.Text = $"{backend} · {path}";
+    }
+
+    static Task OpenStoreAsync(StoreBackend backend, string path) =>
+        LocalStore.OpenAsync(new LocalStoreOptions
+        {
+            Backend = backend,
+            Path = path,
+            EncryptionKey = backend is StoreBackend.Nuvexa or StoreBackend.SqlCipher
+                ? "sample-key"
+                : null
+        });
 
     async Task RefreshAsync(bool logFind = false)
     {

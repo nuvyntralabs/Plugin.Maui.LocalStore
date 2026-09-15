@@ -44,6 +44,52 @@ static class StorePaths
         return directory;
     }
 
+    public static bool Exists(StoreBackend _, string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        if (Directory.Exists(path))
+        {
+            return Directory.EnumerateFileSystemEntries(path).Any();
+        }
+
+        if (File.Exists(path) && new FileInfo(path).Length > 0)
+        {
+            return true;
+        }
+
+        var kv = IsDirectoryStore(path) ? path : path + ".kv";
+        return Directory.Exists(kv) && Directory.EnumerateFileSystemEntries(kv).Any();
+    }
+
+    public static void Delete(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, recursive: true);
+        }
+        else if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+
+        foreach (var extra in new[] { path + "-wal", path + ".lock", path + ".note", path + ".kv" })
+        {
+            if (File.Exists(extra))
+            {
+                File.Delete(extra);
+            }
+
+            if (Directory.Exists(extra))
+            {
+                Directory.Delete(extra, recursive: true);
+            }
+        }
+    }
+
     public static LocalStoreException Wrap(string engine, Exception exception) =>
         new($"{engine} failed to open: {exception.Message}", exception);
 

@@ -23,7 +23,7 @@
     <AssemblyName>Plugin.Maui.LocalStore</AssemblyName>
     <PackageId>Plugin.Maui.LocalStore</PackageId>
     <Title>.NET MAUI LocalStore — Room-style local database facade</Title>
-    <Description>Room-style app-document facade for .NET MAUI. One collection API; the host picks SQLite, NuvexaDB, Realm, LiteDB, DuckDB, SQLCipher, Firebird, LMDB, RocksDB, or LevelDB. Not a job queue, not OfflineSync, and not a replacement for using Nuventra.NuvexaDB directly. Switching backends does not migrate data.</Description>
+    <Description>Room-style app-document facade for .NET MAUI. One collection API; the host picks SQLite, NuvexaDB, Realm, LiteDB, DuckDB, SQLCipher, Firebird, LMDB, RocksDB, or LevelDB. Auto-migrate between engines. Source-generated DAOs and raw SQL/NQL on ILocalStore. Not a job queue or OfflineSync.</Description>
     <PackageTags>dotnet-maui;maui;maui-plugin;sqlite;nuvexadb;realm;litedb;duckdb;sqlcipher;firebird;lmdb;rocksdb;leveldb;local-store;room;embedded;offline;android;ios;maccatalyst;windows;mauiessentials</PackageTags>
     <Authors>Niladri</Authors>
     <Company>MauiEssentials</Company>
@@ -34,9 +34,9 @@
     <PackageProjectUrl>https://nuvyntralabs.github.io/packages/plugin-maui-local-store/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/nuvyntralabs/Plugin.Maui.LocalStore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Version>1.0.1</Version>
-    <PackageVersion>1.0.1</PackageVersion>
-    <PackageReleaseNotes>1.0.1: Ten engines, JSON fallback on unsupported RIDs, platform table, sample picker aligned with library TFMs.</PackageReleaseNotes>
+    <Version>1.1.0</Version>
+    <PackageVersion>1.1.0</PackageVersion>
+    <PackageReleaseNotes>1.1.0: Automatic engine migration (AutoMigrate + Map&lt;T&gt;). Raw SQL/NQL on ILocalStore. Source-generated [StoreDao] implementations.</PackageReleaseNotes>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -71,6 +71,20 @@
     <PackageReference Include="RocksDB" Version="11.8.1.5032" />
     <!-- Native leveldb.dll files are ELF/Mach-O; Android ProcessAssemblies treats them as PE and fails. -->
     <PackageReference Include="LevelDB.Standard" Version="2.1.6.1" ExcludeAssets="native;build;buildTransitive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Plugin.Maui.LocalStore.SourceGenerators\Plugin.Maui.LocalStore.SourceGenerators.csproj"
+                      ReferenceOutputAssembly="false"
+                      OutputItemType="Analyzer"
+                      GlobalPropertiesToRemove="TargetFramework;RuntimeIdentifier" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Plugin.Maui.LocalStore.SourceGenerators\bin\$(Configuration)\netstandard2.0\Plugin.Maui.LocalStore.SourceGenerators.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

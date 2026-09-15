@@ -20,6 +20,15 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>Registers a source-generated <c>[StoreDao]</c> interface against the shared store.</summary>
+    public static IServiceCollection AddMauiLocalStoreDao<TDao>(this IServiceCollection services)
+        where TDao : class
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddTransient(sp => sp.GetRequiredService<ILocalStore>().GetDao<TDao>());
+        return services;
+    }
+
     public static IServiceCollection AddMauiLocalStore(
         this IServiceCollection services,
         Action<LocalStoreOptions>? configure = null)

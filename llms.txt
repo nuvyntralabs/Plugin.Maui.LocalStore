@@ -1,13 +1,13 @@
 # Plugin.Maui.LocalStore
 
-Room-style app-document facade for .NET MAUI. One collection API (`IStoreCollection<T>`). 1.0 opens SQLite, NuvexaDB, Realm, LiteDB, DuckDB, SQLCipher, Firebird, LMDB, RocksDB, and LevelDB. Switching backends does not migrate data. DuckDB, Firebird, RocksDB, and LevelDB use managed JSON files when the native library is missing.
+Room-style app-document facade for .NET MAUI. One collection API (`IStoreCollection<T>`). 1.1 opens SQLite, NuvexaDB, Realm, LiteDB, DuckDB, SQLCipher, Firebird, LMDB, RocksDB, and LevelDB. AutoMigrate + Map<T> copies collections when switching engines. QueryAsync runs SQL or NQL on ILocalStore. [StoreDao] is source-generated. DuckDB, Firebird, RocksDB, and LevelDB use managed JSON files when the native library is missing.
 
 Repository: https://github.com/nuvyntralabs/Plugin.Maui.LocalStore
 NuGet: https://www.nuget.org/packages/Plugin.Maui.LocalStore
 Paper: https://nuvyntralabs.github.io/packages/plugin-maui-local-store/
 Catalog: https://github.com/nuvyntralabs/MauiEssentials
 License: MIT
-Version: 1.0.1
+Version: 1.1.0
 
 ## Supported versions
 
@@ -25,6 +25,8 @@ Registration: `UseMauiLocalStore` — see README.md.
 
 - Room-style local database in .NET MAUI
 - Switch between SQLite, NuvexaDB, Realm, LiteDB, DuckDB, SQLCipher, Firebird, LMDB, RocksDB, and LevelDB with one DAO
+- Copy collections when switching engines (`AutoMigrate` + `Map<T>`)
+- Raw SQL / NQL on `ILocalStore.QueryAsync`, or a source-generated `[StoreDao]`
 - IStoreCollection / StoreFilter for app documents
 
 ## Do not use when

@@ -69,12 +69,21 @@ public static class StoreTour
             log.AppendLine($"{row.Name} {row.Age} {row.City}");
         }
 
-        if (store is INuvexaLocalStore nuvexa)
+        if (store.QueryLanguage != StoreQueryLanguage.None)
         {
-            log.AppendLine("-- NQL escape hatch --");
-            foreach (var json in await nuvexa.ExecuteNqlAsync("db.users.find({ age: { $gte: 21 } }).limit(5)"))
+            log.AppendLine($"-- Raw {store.QueryLanguage} via ILocalStore.QueryAsync --");
+            var command = store.QueryLanguage == StoreQueryLanguage.Nql
+                ? "db.users.find({ age: { $gte: 21 } }).limit(5)"
+                : "SELECT * FROM users WHERE Age >= 21 LIMIT 5";
+            foreach (var row in await store.QueryAsync<Person>(command))
             {
-                log.AppendLine(json);
+                log.AppendLine($"{row.Name} {row.Age}");
+            }
+
+            log.AppendLine("-- Generated IPersonDao.FindAdultsAsync --");
+            foreach (var row in await store.GetDao<IPersonDao>().FindAdultsAsync(21))
+            {
+                log.AppendLine($"{row.Name} {row.Age}");
             }
         }
 

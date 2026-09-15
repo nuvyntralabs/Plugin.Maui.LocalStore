@@ -34,8 +34,34 @@ sealed class SqliteLocalStore : ILocalStore
 
     public StoreBackend Backend { get; }
 
+    public StoreQueryLanguage QueryLanguage => StoreQueryLanguage.Sql;
+
+    internal string FilePath => _path;
+
     public IStoreCollection<T> GetCollection<T>(string name) where T : class, new() =>
         new SqliteStoreCollection<T>(this, StoreNames.Collection(name));
+
+    public Task<IReadOnlyList<T>> QueryAsync<T>(
+        string command,
+        object?[]? args = null,
+        CancellationToken cancellationToken = default) where T : class, new()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(command);
+        return LockedAsync(async db =>
+        {
+            var rows = await db.QueryAsync<T>(command, args ?? []).ConfigureAwait(false);
+            return (IReadOnlyList<T>)rows;
+        }, cancellationToken);
+    }
+
+    public Task<int> ExecuteAsync(
+        string command,
+        object?[]? args = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(command);
+        return LockedAsync(db => db.ExecuteAsync(command, args ?? []), cancellationToken);
+    }
 
     internal async Task<SQLiteAsyncConnection> GetConnectionAsync(CancellationToken cancellationToken)
     {

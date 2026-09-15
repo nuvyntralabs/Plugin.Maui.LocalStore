@@ -241,8 +241,22 @@ public sealed class LocalStoreContractTests
     {
         public StoreBackend Backend => inner.Backend;
 
+        public StoreQueryLanguage QueryLanguage => inner.QueryLanguage;
+
         public IStoreCollection<T> GetCollection<T>(string name) where T : class, new() =>
             inner.GetCollection<T>(name);
+
+        public Task<IReadOnlyList<T>> QueryAsync<T>(
+            string command,
+            object?[]? args = null,
+            CancellationToken cancellationToken = default) where T : class, new() =>
+            inner.QueryAsync<T>(command, args, cancellationToken);
+
+        public Task<int> ExecuteAsync(
+            string command,
+            object?[]? args = null,
+            CancellationToken cancellationToken = default) =>
+            inner.ExecuteAsync(command, args, cancellationToken);
 
         public Task<IReadOnlyList<string>> ExecuteNqlAsync(string nql, CancellationToken cancellationToken = default) =>
             inner is INuvexaLocalStore nuvexa

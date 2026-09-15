@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- Automatic engine migration: `AutoMigrate`, `MigrateFrom`, `Map<T>`, and `LocalStore.MigrateAsync`
+- Raw SQL / NQL on `ILocalStore.QueryAsync<T>` / `ExecuteAsync` (`StoreQueryLanguage`). JSON fallback (mobile DuckDB / Firebird) reports `None`.
+- Source-generated `[StoreDao]` implementations (`GetDao<T>`, `AddMauiLocalStoreDao<T>`)
+
 ## 1.0.1
 
 - Ten engines behind `IStoreCollection<T>` (SQLite, NuvexaDB, Realm, LiteDB, DuckDB, SQLCipher, Firebird, LMDB, RocksDB, LevelDB)
